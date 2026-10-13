@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Laboratory Equipment System</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f4f6f8; color: #222; }
+    header { background: #1f4e79; color: #fff; padding: 16px 24px; }
+    header h1 { margin: 0; font-size: 1.4rem; }
+    main { max-width: 960px; margin: 20px auto; padding: 0 16px; }
+    section { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+    h2 { margin-top: 0; font-size: 1.1rem; }
+    form, .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    input { padding: 8px; border: 1px solid #bbb; border-radius: 4px; }
+    button { padding: 8px 14px; border: 0; border-radius: 4px; background: #1f4e79; color: #fff; cursor: pointer; }
+    button.danger { background: #b3261e; }
+    button.secondary { background: #666; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e3e3e3; }
+    th { background: #eef2f6; }
+    .badge { padding: 2px 8px; border-radius: 10px; font-size: .8rem; font-weight: bold; }
+    .available { background: #d7f0dc; color: #1b6b2f; }
+    .out { background: #fbdcda; color: #9a1b13; }
+    #message { padding: 10px; border-radius: 4px; margin-bottom: 16px; display: none; }
+    #message.ok { display: block; background: #d7f0dc; color: #1b6b2f; }
+    #message.err { display: block; background: #fbdcda; color: #9a1b13; }
+  </style>
+</head>
+<body>
+  <header><h1>Laboratory Equipment Management System</h1></header>
+  <main>
+    <div id="message"></div>
+
+    <section>
+      <h2>Add New Equipment</h2>
+      <form id="addForm">
+        <input type="text" id="name" placeholder="Name" required />
+        <input type="text" id="category" placeholder="Category" required />
+        <input type="number" id="quantity" placeholder="Quantity" required />
+        <input type="text" id="condition" placeholder="Condition" required />
+        <button type="submit">Add</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>Search by ID</h2>
+      <div class="row">
+        <input type="number" id="searchId" placeholder="Equipment ID" />
+        <button id="searchBtn">Search</button>
+        <button id="showAllBtn" class="secondary">Show All</button>
+      </div>
+    </section>
+
+    <section>
+      <h2 id="tableTitle">All Equipment</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>Name</th><th>Category</th>
+            <th>Quantity</th><th>Condition</th><th>Status</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <p id="emptyNote" class="muted" style="display:none;">No records to display.</p>
+    </section>
+  </main>
+
+  <script>
+    const API = '/api/equipment';
+    const messageEl = document.getElementById('message');
+    const tableBody = document.getElementById('tableBody');
+    const emptyNote = document.getElementById('emptyNote');
+    const tableTitle = document.getElementById('tableTitle');
+
+    function showMessage(text, isError) {
+      messageEl.textContent = text;
+      messageEl.className = isError ? 'err' : 'ok';
+      setTimeout(() => { messageEl.className = ''; messageEl.style.display = ''; }, 4000);
+    }
+
+    async function request(url, errorMessage, options = {}) {
+      const response = await fetch(url, options);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || errorMessage);
+      return data;
+    }
+
+    function escapeHtml(value) {
+      const div = document.createElement('div');
+      div.textContent = value;
+      return div.innerHTML;
+    }
+
+    function render(items) {
+      tableBody.innerHTML = '';
+      emptyNote.style.display = items.length ? 'none' : 'block';
+      items.forEach((item) => {
+        const available = item.status === 'AVAILABLE';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.id}</td>
+          <td>${escapeHtml(item.name)}</td>
+          <td>${escapeHtml(item.category)}</td>
+          <td>${item.quantity}</td>
+          <td>${escapeHtml(item.condition)}</td>
+          <td><span class="badge ${available ? 'available' : 'out'}">${item.status}</span></td>
+          <td><button class="danger" data-id="${item.id}">Delete</button></td>
+        `;
+        tableBody.appendChild(tr);
+      });
+    }
+
+    async function loadAll() {
+      try {
+        tableTitle.textContent = 'All Equipment';
+        render(await request(API, 'Failed to load records.'));
+      } catch (err) {
+        showMessage(err.message, true);
+      }
+    }
+
+    async function searchById() {
+      const id = document.getElementById('searchId').value;
+      if (id === '') return showMessage('Enter an ID to search.', true);
+      try {
+        const data = await request(`${API}/${id}`, 'Search failed.');
+        tableTitle.textContent = `Search Result (ID ${id})`;
+        render([data]);
+      } catch (err) {
+        render([]);
+        showMessage(err.message, true);
+      }
+    }
+    
+    document.getElementById('addForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const body = {
+        name: document.getElementById('name').value,
+        category: document.getElementById('category').value,
+        quantity: document.getElementById('quantity').value,
+        condition: document.getElementById('condition').value,
+      };
+      try {
+        const data = await request(API, 'Failed to add equipment.', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        showMessage(`Added "${data.name}" (ID ${data.id}).`, false);
+        e.target.reset();
+        loadAll();
+      } catch (err) {
+        showMessage(err.message, true);
+      }
+    });
+    
+    tableBody.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button[data-id]');
+      if (!btn) return;
+      const id = btn.dataset.id;
+      if (!confirm(`Delete equipment ID ${id}?`)) return;
+      try {
+        const data = await request(`${API}/${id}`, 'Failed to delete.', { method: 'DELETE' });
+        showMessage(data.message, false);
+        loadAll();
+      } catch (err) {
+        showMessage(err.message, true);
+      }
+    });
+
+    document.getElementById('searchBtn').addEventListener('click', searchById);
+    document.getElementById('showAllBtn').addEventListener('click', loadAll);
+
+    loadAll();
+  </script>
+</body>
+</html>
