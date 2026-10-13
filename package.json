@@ -1,0 +1,12 @@
+{
+  "name": "lab-equipment-api",
+  "version": "1.0.0",
+  "description": "Laboratory Equipment Management System - Node.js + Express REST API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

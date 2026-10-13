@@ -1,0 +1,37 @@
+[
+  {
+    "id": 1,
+    "name": "tEST",
+    "category": "Optics",
+    "quantity": 5,
+    "condition": "Good"
+  },
+  {
+    "id": 2,
+    "name": "Centrifuge",
+    "category": "Separation",
+    "quantity": 0,
+    "condition": "Needs Repair"
+  },
+  {
+    "id": 3,
+    "name": "Beaker",
+    "category": "Glass",
+    "quantity": 20,
+    "condition": "Excellent"
+  },
+  {
+    "id": 4,
+    "name": "Bunsen",
+    "category": "Heating",
+    "quantity": 0,
+    "condition": "Fair"
+  },
+  {
+    "id": 5,
+    "name": "TESTEST",
+    "category": "test",
+    "quantity": 4,
+    "condition": "good"
+  }
+]
